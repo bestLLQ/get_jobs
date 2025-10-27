@@ -55,6 +55,10 @@ public class Job implements Serializable {
      */
     private String companyInfo;
 
+    private String companyArea;
+
+    private String companyAreaDetail;
+
     @Override
     public String toString() {
         return String.format("【%s, %s, %s, %s, %s, %s】", companyName, jobName, jobArea, salary, companyTag, recruiter);

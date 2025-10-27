@@ -42,6 +42,11 @@ public class BossConfig {
     private List<String> cityCode;
 
     /**
+     * 城市编码
+     */
+    private List<String> cityArea;
+
+    /**
      * 自定义城市编码映射
      */
     private Map<String, String> customCityCode;
@@ -171,6 +176,7 @@ public class BossConfig {
         config.setJobType(BossEnum.JobType.forValue(config.getJobType()).getCode());
         // 转换薪资范围
         config.setSalary(BossEnum.Salary.forValue(config.getSalary()).getCode());
+
         // 转换城市编码
         List<String> convertedCityCodes = config.getCityCode().stream()
                 .map(city -> {

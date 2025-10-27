@@ -47,6 +47,7 @@ public class Boss {
     static Set<String> blackCompanies;
     static Set<String> blackRecruiters;
     static Set<String> blackJobs;
+    static Set<String> cityArea;
     static List<Job> resultList = new ArrayList<>();
     static String dataPath = "src/main/java/boss/data.json";
     static String cookiePath = "src/main/java/boss/cookie.json";
@@ -67,6 +68,7 @@ public class Boss {
                 initialData.put("blackCompanies", new HashSet<>());
                 initialData.put("blackRecruiters", new HashSet<>());
                 initialData.put("blackJobs", new HashSet<>());
+                initialData.put("cityArea", new HashSet<>());
                 String initialJson = customJsonFormat(initialData);
                 Files.write(Paths.get(dataPath), initialJson.getBytes());
                 log.info("创建数据文件: {}", dataPath);
@@ -165,11 +167,19 @@ public class Boss {
             for (int i = 0; i < count; i++) {
                 // 重新获取卡片，避免元素过期
                 cards = page.locator("//ul[contains(@class, 'rec-job-list')]//li[contains(@class, 'job-card-box')]");
-                cards.nth(i).click();
+                Locator currentDom = cards.nth(i);
+                currentDom.click();
                 PlaywrightUtil.sleep(1);
 
+                // 先获取公司地址
+
+                // Boss公司地址
+                String bossCompanyArea = safeText(currentDom, "span[class*='company-location']");
+                log.info("获取到当前公司地址: {}", bossCompanyArea);
+                String[] companyArea = bossCompanyArea.split("·");
+
                 // 等待详情内容加载
-                page.waitForSelector("div[class*='job-detail-box']", new Page.WaitForSelectorOptions().setTimeout(4000));
+                page.waitForSelector("div[class*='job-detail-box']", new Page.WaitForSelectorOptions().setTimeout(5000));
                 Locator detailBox = page.locator("div[class*='job-detail-box']");
 
                 // 岗位名称
@@ -193,8 +203,11 @@ public class Boss {
                 // Boss公司/职位
                 String bossTitleRaw = safeText(detailBox, "div[class*='boss-info-attr']");
                 String[] bossTitleInfo = splitBossTitle(bossTitleRaw);
+
                 String bossCompany = bossTitleInfo[0];
-                if (blackCompanies.stream().anyMatch(bossCompany::contains)) continue;
+                if (blackCompanies.contains(bossCompany)) {
+                    continue;
+                }
                 String bossJobTitle = bossTitleInfo[1];
                 if (blackRecruiters.stream().anyMatch(bossJobTitle::contains)) continue;
 
@@ -206,6 +219,10 @@ public class Boss {
                 job.setCompanyName(bossCompany);
                 job.setRecruiter(bossName);
                 job.setJobInfo(jobDesc);
+                if (companyArea.length == 3) {
+                    job.setCompanyArea(companyArea[1].trim());
+                    job.setCompanyAreaDetail(companyArea[2].trim());
+                }
 
                 // 输出
 //                log.info("正在投递：第{}条 | 岗位名称：{} | 薪资：{} | 城市/经验/学历：{} | Boss姓名：{} | 活跃状态：{} | 公司：{} | 职位：{}", (i + 1), jobName, jobSalary, tags, bossName, bossActive, bossCompany, bossJobTitle);
@@ -427,7 +444,16 @@ public class Boss {
     @SneakyThrows
     private static void resumeSubmission(com.microsoft.playwright.Page page, String keyword, Job job) {
         PlaywrightUtil.sleep(1);
-
+        boolean deadHR = isDeadHR(page);
+        // 筛选非活跃HR
+        if (deadHR) {
+            log.info("当前HR 非活跃，跳过公司：{}, 岗位:{}", job.getCompanyInfo(),  job.getJobName());
+            return;
+        }
+        if (unFitMyCityArea(job)) {
+            log.info("当前公司不在指定地区范围内，跳过公司：{}, 岗位：{}, 地址：{}", job.getCompanyName(),  job.getJobName(), job.getCompanyArea());
+            return;
+        }
         // 1. 查找“查看更多信息”按钮（必须存在且新开页）
         Locator moreInfoBtn = page.locator("a.more-job-btn");
         if (moreInfoBtn.count() == 0) {
@@ -540,6 +566,20 @@ public class Boss {
         // 10. 成功投递加入结果
         if (sendSuccess) {
             resultList.add(job);
+        }
+    }
+
+    private static boolean unFitMyCityArea(Job job) {
+        Set<String> cityArea = new HashSet<>(config.getCityArea());
+        if (cityArea.size() == 0) {
+            return false;
+        } else {
+            String companyArea = job.getCompanyArea();
+            if (companyArea == null) {
+                return false;
+            }
+            boolean contains = cityArea.contains(companyArea.trim());
+            return !contains;
         }
     }
 
@@ -704,7 +744,7 @@ public class Boss {
             Locator activeTimeLocator = page.locator(HR_ACTIVE_TIME);
             if (activeTimeLocator.count() > 0) {
                 String activeTimeText = activeTimeLocator.textContent();
-                log.info("{}：{}", getCompanyAndHR(page), activeTimeText);
+                log.info("HR活跃状态：{}：{}", getCompanyAndHR(page), activeTimeText);
                 // 如果 HR 活跃状态符合预期，则返回 true
                 return containsDeadStatus(activeTimeText, config.getDeadStatus());
             }
