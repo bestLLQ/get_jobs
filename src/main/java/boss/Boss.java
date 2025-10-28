@@ -69,7 +69,7 @@ public class Boss {
                 initialData.put("blackRecruiters", new HashSet<>());
                 initialData.put("blackJobs", new HashSet<>());
                 initialData.put("cityArea", new HashSet<>());
-                String initialJson = customJsonFormat(initialData);
+                String initialJson = JSONUtils.customJsonFormat(initialData);
                 Files.write(Paths.get(dataPath), initialJson.getBytes());
                 log.info("创建数据文件: {}", dataPath);
             }
@@ -319,7 +319,7 @@ public class Boss {
             data.put("blackCompanies", blackCompanies);
             data.put("blackRecruiters", blackRecruiters);
             data.put("blackJobs", blackJobs);
-            String json = customJsonFormat(data);
+            String json = JSONUtils.customJsonFormat(data);
             Files.write(Paths.get(path), json.getBytes());
         } catch (IOException e) {
             log.error("保存【{}】数据失败！", path);
@@ -406,20 +406,6 @@ public class Boss {
             }
         }
         log.info("黑名单公司数量：{}", blackCompanies.size());
-    }
-
-    private static String customJsonFormat(Map<String, Set<String>> data) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        for (Map.Entry<String, Set<String>> entry : data.entrySet()) {
-            sb.append("    \"").append(entry.getKey()).append("\": [\n");
-            sb.append(entry.getValue().stream().map(s -> "        \"" + s + "\"").collect(Collectors.joining(",\n")));
-
-            sb.append("\n    ],\n");
-        }
-        sb.delete(sb.length() - 2, sb.length());
-        sb.append("\n}");
-        return sb.toString();
     }
 
     private static void loadData(String path) {

@@ -1,16 +1,25 @@
 package zhilian;
 
+import boss.BossConfig;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.JSONUtils;
 import utils.Job;
 import utils.JobUtils;
 import utils.SeleniumUtil;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,6 +46,34 @@ public class ZhiLian {
     static List<Job> resultList = new ArrayList<>();
     static Date startDate;
 
+    static Set<String> blackCompanies;
+    static Set<String> blackRecruiters;
+    static Set<String> blackJobs;
+    static String dataPath = "src/main/java/boss/data.json";
+
+    static {
+        try {
+            // 检查dataPath文件是否存在，不存在则创建
+            File dataFile = new File(dataPath);
+            if (!dataFile.exists()) {
+                // 确保父目录存在
+                if (!dataFile.getParentFile().exists()) {
+                    dataFile.getParentFile().mkdirs();
+                }
+                // 创建文件并写入初始JSON结构
+                Map<String, Set<String>> initialData = new HashMap<>();
+                initialData.put("blackCompanies", new HashSet<>());
+                initialData.put("blackRecruiters", new HashSet<>());
+                initialData.put("blackJobs", new HashSet<>());
+                initialData.put("cityArea", new HashSet<>());
+                String initialJson = JSONUtils.customJsonFormat(initialData);
+                Files.write(Paths.get(dataPath), initialJson.getBytes());
+                log.info("创建数据文件: {}", dataPath);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     public static void main(String[] args) {
         SeleniumUtil.initDriver();
         startDate = new Date();
@@ -357,4 +394,5 @@ public class ZhiLian {
     private static boolean isLoginRequired() {
         return !CHROME_DRIVER.getCurrentUrl().contains("i.zhaopin.com");
     }
+
 }
