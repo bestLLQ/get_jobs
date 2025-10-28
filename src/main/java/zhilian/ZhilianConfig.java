@@ -28,6 +28,8 @@ public class ZhilianConfig {
      */
     private String salary;
 
+    private List<String> cityArea;
+
 
     @SneakyThrows
     public static ZhilianConfig init() {
@@ -35,6 +37,7 @@ public class ZhilianConfig {
         // 转换城市编码
         config.setCityCode(ZhilianEnum.CityCode.forValue(config.getCityCode()).getCode());
         String salary = config.getSalary();
+        config.setCityArea(config.getCityArea());
         config.setSalary(Objects.equals("不限", salary) ? "0" : salary);
         return config;
     }

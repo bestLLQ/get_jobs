@@ -13,6 +13,7 @@ public class ZhilianEnum {
     public enum CityCode {
         NULL("不限", "0"),
         BEIJING("北京", "530"),
+        HANGZHOU("杭州", "653"),
         SHANGHAI("上海", "538"),
         GUANGZHOU("广州", "763"),
         SHENZHEN("深圳", "765"),

@@ -38,9 +38,10 @@ liepin:
   pubTime: "30" # 发布时间，单位天
 
 zhilian:
-  cityCode: "上海"
-  salary: "25001,35000" #薪资区间
-  keywords: [ "AI", "Java", "Python", "Golang" ]
+  cityCode: "杭州"
+  salary: "15001,25000" #薪资区间 ->0000,9999999(不限)|0000,4000|4001,6000|6001,8000|8001,10000|10001,1500|15001,25000|25001,35000|35001,50000|50001,9999999
+  keywords: [ "Java" ]
+  cityArea: ['滨江区', '萧山区', '西湖区']
 
 ai:
   introduce: "我有5年开发经验，熟悉常用设计模式。熟悉Java并发、IO编程，了解JVM性能调优。熟练使用MySQL、Redis等数据库，以及Elasticsearch（ES）检索引擎、RocketMQ、Kafka等消息中间件。对微服务架构有深入理解，熟练使用spring、Spring Cloud等开发组件，并具备分布式锁的实际开发经验。此外，熟练掌握Linux基本操作命令和Shell脚本编写，以及Vue2、Vue3和React前端框架的使用。在Node开发领域也有一定的经验，对微服务架构的开发流程有全面的认识。" #这是喂给AI的提示词，主要介绍自己的优势

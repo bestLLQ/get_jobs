@@ -11,6 +11,7 @@ import utils.SeleniumUtil;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static utils.Bot.sendMessageByTime;
@@ -84,7 +85,7 @@ public class ZhiLian {
             return;
         }
         WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[contains(@class, 'joblist-box__item')]")));
-        setMaxPages();
+//        setMaxPages();
         for (int i = 1; i <= maxPage; i++) {
             if (i != 1) {
                 CHROME_DRIVER.get(getSearchUrl(keyword, i));
@@ -98,59 +99,97 @@ public class ZhiLian {
                 SeleniumUtil.sleep(1);
             }
             // 全选
-            try {
-                WebElement allSelect = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//i[@class='betch__checkall__checkbox']")));
-                allSelect.click();
-            } catch (Exception e) {
-                log.info("没有全选按钮，程序退出...");
-                continue;
-            }
+//            try {
+//                WebElement allSelect = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//i[@class='betch__checkall__checkbox']")));
+//                allSelect.click();
+//            } catch (Exception e) {
+//                log.info("没有全选按钮，程序退出...");
+//                continue;
+//            }
             // 投递
-            WebElement submit = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@class='betch__button']")));
-            submit.click();
-            if (checkIsLimit()) {
-                break;
+//            WebElement submit = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[@class='betch__button']")));
+//            submit.click();
+//            if (checkIsLimit()) {
+//                break;
+//            }
+            WebElement jobCardList = WAIT.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@class='positionlist__list']")));
+            List<WebElement> elements = jobCardList.findElements(By.className("joblist-box__item"));
+            // 保存主窗口句柄
+            String mainWindow = CHROME_DRIVER.getWindowHandle();
+            // 获取到当前页所有岗位
+            for (WebElement element : elements) {
+                try {
+                    // 解析岗位信息
+                    Job job = parseJobInfo(element);
+                    SeleniumUtil.sleep(2);
+                    // 点击投递按钮
+                    WebElement applyBtn = element.findElement(By.xpath(".//button[@class='collect-and-apply__btn']"));
+                    applyBtn.click();
+                    SeleniumUtil.sleep(1);
+                    
+                    // 处理新打开的标签页
+                    Set<String> allWindows = CHROME_DRIVER.getWindowHandles();
+                    if (allWindows.size() > 1) {
+                        for (String window : allWindows) {
+                            if (!window.equals(mainWindow)) {
+                                CHROME_DRIVER.switchTo().window(window);
+                                SeleniumUtil.sleep(1);
+                                CHROME_DRIVER.close();
+                                SeleniumUtil.sleep(1);
+                                break;
+                            }
+                        }
+                        CHROME_DRIVER.switchTo().window(mainWindow);
+                    }
+                    
+                    // 记录投递结果
+                    resultList.add(job);
+                    log.info("投递【{}】公司【{}】岗位，薪资【{}】，地区【{}】", 
+                            job.getCompanyName(), job.getJobName(), job.getSalary(), job.getJobInfo());
+                    
+                    SeleniumUtil.sleep(1);
+                } catch (Exception e) {
+                    log.error("投递岗位失败: {}", e.getMessage());
+                }
             }
-            SeleniumUtil.sleep(1);
+            // 当前页处理完了
+            log.info("第【{}】页岗位投递完成！", i);
             // 切换到新的标签页
-            ArrayList<String> tabs = new ArrayList<>(CHROME_DRIVER.getWindowHandles());
-            CHROME_DRIVER.switchTo().window(tabs.get(tabs.size() - 1));
+
             //关闭弹框
-            try {
-                WebElement result = CHROME_DRIVER.findElement(By.xpath("//div[@class='deliver-dialog']"));
-                if (result.getText().contains("申请成功")) {
-                    log.info("岗位申请成功！");
-                }
-            } catch (Exception e) {
-                log.error("关闭投递弹框失败...");
-            }
-            try {
-                WebElement close = CHROME_DRIVER.findElement(By.xpath("//img[@title='close-icon']"));
-                close.click();
-            } catch (Exception e) {
-                if (checkIsLimit()) {
-                    break;
-                }
-            }
-            try {
-                // 投递相似职位
-                WebElement checkButton = CHROME_DRIVER.findElement(By.xpath("//div[contains(@class, 'applied-select-all')]//input"));
-                if (!checkButton.isSelected()) {
-                    checkButton.click();
-                }
-                List<WebElement> jobs = CHROME_DRIVER.findElements(By.xpath("//div[@class='recommend-job']"));
-                WebElement post = CHROME_DRIVER.findElement(By.xpath("//div[contains(@class, 'applied-select-all')]//button"));
-                post.click();
-                printRecommendJobs(jobs);
-                log.info("相似职位投递成功！");
-            } catch (NoSuchElementException e) {
-                log.error("没有匹配到相似职位...");
-            } catch (Exception e) {
-                log.error("相似职位投递异常！！！");
-            }
+//            try {
+//                WebElement result = CHROME_DRIVER.findElement(By.xpath("//div[@class='deliver-dialog']"));
+//                if (result.getText().contains("申请成功")) {
+//                    log.info("岗位申请成功！");
+//                }
+//            } catch (Exception e) {
+//                log.error("关闭投递弹框失败...");
+//            }
+//            try {
+//                WebElement close = CHROME_DRIVER.findElement(By.xpath("//img[@title='close-icon']"));
+//                close.click();
+//            } catch (Exception e) {
+//                if (checkIsLimit()) {
+//                    break;
+//                }
+//            }
+//            try {
+//                // 投递相似职位
+//                WebElement checkButton = CHROME_DRIVER.findElement(By.xpath("//div[contains(@class, 'applied-select-all')]//input"));
+//                if (!checkButton.isSelected()) {
+//                    checkButton.click();
+//                }
+//                List<WebElement> jobs = CHROME_DRIVER.findElements(By.xpath("//div[@class='recommend-job']"));
+//                WebElement post = CHROME_DRIVER.findElement(By.xpath("//div[contains(@class, 'applied-select-all')]//button"));
+//                post.click();
+//                printRecommendJobs(jobs);
+//                log.info("相似职位投递成功！");
+//            } catch (NoSuchElementException e) {
+//                log.error("没有匹配到相似职位...");
+//            } catch (Exception e) {
+//                log.error("相似职位投递异常！！！");
+//            }
             // 投完了关闭当前窗口并切换至第一个窗口
-            CHROME_DRIVER.close();
-            CHROME_DRIVER.switchTo().window(tabs.get(0));
         }
     }
 
@@ -189,6 +228,85 @@ public class ZhiLian {
             log.info("设置默认最大页数50，如有需要请自行调整...");
             maxPage = 50;
         }
+    }
+
+    private static Job parseJobInfo(WebElement element) {
+        Job job = new Job();
+        
+        // 岗位名称
+        try {
+            WebElement jobNameElement = element.findElement(By.xpath(".//a[@class='jobinfo__name']"));
+            job.setJobName(jobNameElement.getText().trim());
+        } catch (Exception e) {
+            log.warn("解析岗位名称失败");
+            job.setJobName("未知岗位");
+        }
+        
+        // 薪资
+        try {
+            WebElement salaryElement = element.findElement(By.xpath(".//p[@class='jobinfo__salary']"));
+            job.setSalary(salaryElement.getText().trim());
+        } catch (Exception e) {
+            log.warn("解析薪资失败");
+            job.setSalary("面议");
+        }
+        
+        // 工作区域、经验和学历
+        try {
+            List<WebElement> otherInfos = element.findElements(By.xpath(".//div[@class='jobinfo__other-info-item']"));
+            String location = "";
+            String experience = "";
+            String education = "";
+            
+            if (!otherInfos.isEmpty()) {
+                // 第一个包含地区信息
+                try {
+                    location = otherInfos.get(0).findElement(By.tagName("span")).getText().trim();
+                } catch (Exception e) {
+                    location = otherInfos.get(0).getText().trim();
+                }
+            }
+            if (otherInfos.size() > 1) {
+                experience = otherInfos.get(1).getText().trim();
+            }
+            if (otherInfos.size() > 2) {
+                education = otherInfos.get(2).getText().trim();
+            }
+            
+            job.setJobInfo(location + (experience.isEmpty() ? "" : "·" + experience) + (education.isEmpty() ? "" : "·" + education));
+        } catch (Exception e) {
+            log.warn("解析工作信息失败: {}", e.getMessage());
+            job.setJobInfo("未知");
+        }
+        
+        // 公司名称
+        try {
+            WebElement companyNameElement = element.findElement(By.xpath(".//a[@class='companyinfo__name']"));
+            job.setCompanyName(companyNameElement.getText().trim());
+        } catch (Exception e) {
+            log.warn("解析公司名称失败");
+            job.setCompanyName("未知公司");
+        }
+        
+        // 公司标签
+        try {
+            List<WebElement> companyTags = element.findElements(By.xpath(".//div[@class='companyinfo__tag']//div[@class='joblist-box__item-tag']"));
+            if (!companyTags.isEmpty()) {
+                String companyTag = companyTags.stream()
+                        .map(WebElement::getText)
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.joining("·"));
+                job.setCompanyTag(companyTag);
+            } else {
+                job.setCompanyTag("");
+            }
+        } catch (Exception e) {
+            log.warn("解析公司标签失败");
+            job.setCompanyTag("");
+        }
+        
+        return job;
     }
 
     private static void printRecommendJobs(List<WebElement> jobs) {
