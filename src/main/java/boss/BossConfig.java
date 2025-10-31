@@ -24,7 +24,7 @@ public class BossConfig {
     /**
      * 用于打招呼的语句
      */
-    private String sayHi;
+    private List<String> sayHi;
 
     /**
      * 开发者模式
