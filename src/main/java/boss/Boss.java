@@ -213,7 +213,7 @@ public class Boss {
                 List<String> keywords = config.getKeywords();
                 boolean getJOB = false;
                 for (String s : keywords) {
-                    if (!jobName.contains(s)) {
+                    if (!jobName.toUpperCase(Locale.ROOT).contains(s.toUpperCase(Locale.ROOT))) {
                         log.info("【{}】岗位名称不包含关键词--{}", jobName, s);
                     } else {
                         getJOB = true;
@@ -242,15 +242,16 @@ public class Boss {
                 String[] bossInfo = splitBossName(bossNameRaw);
                 String bossName = bossInfo[0];
                 String bossActive = bossInfo[1];
-                if (config.getDeadStatus().stream().anyMatch(bossActive::contains)) {
-                    log.info("非活跃Boss，跳过: " + bossActive);
-                    continue;
-                }
+
                 // Boss公司/职位
                 String bossTitleRaw = safeText(detailBox, "div[class*='boss-info-attr']");
                 String[] bossTitleInfo = splitBossTitle(bossTitleRaw);
 
                 String bossCompany = bossTitleInfo[0];
+                if (config.getDeadStatus().stream().anyMatch(bossActive::contains)) {
+                    log.info("非活跃Boss，公司： {} 跳过: {}",  bossCompany, bossActive);
+                    continue;
+                }
                 if (blackCompanies.contains(bossCompany)) {
                     log.info("黑名单公司，跳过: {}", bossCompany);
                     continue;
