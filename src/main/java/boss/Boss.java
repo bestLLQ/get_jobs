@@ -3,6 +3,8 @@ package boss;
 import ai.AiConfig;
 import ai.AiFilter;
 import ai.AiService;
+import ch.qos.logback.classic.LoggerContext;
+import com.alibaba.fastjson.JSON;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import lombok.SneakyThrows;
@@ -119,7 +121,7 @@ public class Boss {
         try {
             Thread.sleep(1000); // 等待1秒确保日志写入完成
             // 强制刷新日志 - 使用正确的方法
-            ch.qos.logback.classic.LoggerContext loggerContext = (ch.qos.logback.classic.LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
+            LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
             loggerContext.stop();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -128,6 +130,31 @@ public class Boss {
 
     private static void postJobByCity(String cityCode) {
         String searchUrl = getSearchUrl(cityCode);
+        List<String> cityAreaList = config.getCityArea();
+        if (cityAreaList != null && !cityAreaList.isEmpty()) {
+            HashMap<String, String> params = new HashMap<>();
+            params.put("cityCode", cityCode);
+            BossResp bossResp = HttpUtils.get("https://www.zhipin.com/wapi/zpgeek/businessDistrict.json", params, BossResp.class);
+            Object zpData = bossResp.getZpData();
+            if (zpData != null) {
+                String zpDataStr = JSON.toJSONString(zpData);
+                com.alibaba.fastjson.JSONObject jsonObject = com.alibaba.fastjson.JSONObject.parseObject(zpDataStr);
+                BossCity bossCity = JSON.toJavaObject(jsonObject.getJSONObject("businessDistrict"), BossCity.class);
+                List<BossCity> subLevelModelList = bossCity.getSubLevelModelList();
+                String areaCode = "";
+                for (BossCity area : subLevelModelList) {
+                    if (cityAreaList.contains(area.getName())) {
+                        areaCode += area.getCode() + ",";
+                    }
+                }
+                if (areaCode.length() > 0) {
+                    areaCode = areaCode.substring(0, areaCode.length() - 1);
+                    searchUrl += JobUtils.appendParam("multiBusinessDistrict", areaCode);
+                    log.info("投递地址:{}", searchUrl);
+                }
+            }
+        }
+
         for (String keyword : config.getKeywords()) {
             int postCount = 0;
             // 使用 URLEncoder 对关键词进行编码
@@ -175,7 +202,6 @@ public class Boss {
 
                 // Boss公司地址
                 String bossCompanyArea = safeText(currentDom, "span[class*='company-location']");
-                log.info("获取到当前公司地址: {}", bossCompanyArea);
                 String[] companyArea = bossCompanyArea.split("·");
 
                 // 等待详情内容加载
@@ -206,10 +232,14 @@ public class Boss {
 
                 String bossCompany = bossTitleInfo[0];
                 if (blackCompanies.contains(bossCompany)) {
+                    log.info("黑名单公司，跳过: {}", bossCompany);
                     continue;
                 }
                 String bossJobTitle = bossTitleInfo[1];
-                if (blackRecruiters.stream().anyMatch(bossJobTitle::contains)) continue;
+                if (blackRecruiters.stream().anyMatch(bossJobTitle::contains)) {
+                    log.info("黑名单职位，跳过: {}", bossJobTitle);
+                    continue;
+                }
 
                 // 创建Job对象
                 Job job = new Job();
@@ -225,7 +255,7 @@ public class Boss {
                 }
 
                 // 输出
-//                log.info("正在投递：第{}条 | 岗位名称：{} | 薪资：{} | 城市/经验/学历：{} | Boss姓名：{} | 活跃状态：{} | 公司：{} | 职位：{}", (i + 1), jobName, jobSalary, tags, bossName, bossActive, bossCompany, bossJobTitle);
+                log.info("正在投递：第{}条 | 岗位名称：{} | 薪资：{} | 城市/经验/学历：{} | Boss姓名：{} | 活跃状态：{} | 公司：{} | 职位：{}", (i + 1), jobName, jobSalary, tags, bossName, bossActive, bossCompany, bossJobTitle);
                 resumeSubmission(page, keyword, job);
                 postCount++;
             }
@@ -436,20 +466,16 @@ public class Boss {
             log.info("当前HR 非活跃，跳过公司：{}, 岗位:{}", job.getCompanyInfo(),  job.getJobName());
             return;
         }
-        if (unFitMyCityArea(job)) {
-            log.info("当前公司不在指定地区范围内，跳过公司：{}, 岗位：{}, 地址：{}", job.getCompanyName(),  job.getJobName(), job.getCompanyArea());
-            return;
-        }
         // 1. 查找“查看更多信息”按钮（必须存在且新开页）
         Locator moreInfoBtn = page.locator("a.more-job-btn");
         if (moreInfoBtn.count() == 0) {
-            log.warn("未找到“查看更多信息”按钮，跳过...");
+            log.error("未找到“查看更多信息”按钮，跳过...");
             return;
         }
         // 强制用js新开tab
         String href = moreInfoBtn.first().getAttribute("href");
         if (href == null || !href.startsWith("/job_detail/")) {
-            log.warn("未获取到岗位详情链接，跳过...");
+            log.error("未获取到岗位详情链接，跳过...");
             return;
         }
         String detailUrl = "https://www.zhipin.com" + href;
