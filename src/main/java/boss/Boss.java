@@ -225,7 +225,10 @@ public class Boss {
                 String[] bossInfo = splitBossName(bossNameRaw);
                 String bossName = bossInfo[0];
                 String bossActive = bossInfo[1];
-                if (config.getDeadStatus().stream().anyMatch(bossActive::contains)) continue;
+                if (config.getDeadStatus().stream().anyMatch(bossActive::contains)) {
+                    log.info("非活跃Boss，跳过: " + bossActive);
+                    continue;
+                }
                 // Boss公司/职位
                 String bossTitleRaw = safeText(detailBox, "div[class*='boss-info-attr']");
                 String[] bossTitleInfo = splitBossTitle(bossTitleRaw);
