@@ -114,7 +114,7 @@ public class ZhiLian {
                 JobUtils.appendParam("jl", config.getCityCode()) +
                 JobUtils.appendParam("kw", keyword) +
                 JobUtils.appendParam("sl", config.getSalary()) +
-                "&p=" + page;
+                "&p=" + page + "&re=2361";
     }
 
     private static void submitJobs(String keyword) {
@@ -370,7 +370,7 @@ public class ZhiLian {
         if (SeleniumUtil.isCookieValid("./src/main/java/zhilian/cookie.json")) {
             SeleniumUtil.loadCookie("./src/main/java/zhilian/cookie.json");
             CHROME_DRIVER.navigate().refresh();
-            SeleniumUtil.sleep(1);
+            SeleniumUtil.sleep(10);
         }
         if (isLoginRequired()) {
             scanLogin();
